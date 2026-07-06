@@ -1,0 +1,14 @@
+# Python
+python-reference/**/.venv/
+__pycache__/
+*.pyc
+# R
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+# OS / editor
+.DS_Store
+# 作業中間物
+*.log
+scratch/

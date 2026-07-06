@@ -1,0 +1,181 @@
+# tikz-omr — 設計方針（CLAUDE.md）
+
+TeX/TikZ で作ったマークシートを読み取り，回答を CSV 化する一連のフリーソフトウェア。
+
+- リポジトリ: `~/Dropbox/Git/tikz-omr` → `github.com/kosugitti/tikz-omr`
+- R パッケージ名: **`tikzomr`**（Rはハイフン不可のためリポジトリ名と分ける）
+- ライセンス: GPL-3
+- 作者: 小杉考司
+
+---
+
+## 1. 目的とスコープ
+
+### 目的
+
+授業の定期試験・確認テストで使うマークシートを，次の一連の流れで運用する。
+
+```
+問題を作る → TikZ でマークシートを作る → 読み取り設定が自動的に決まる
+          → 試験実施・スキャン → すぐに回答 CSV ができる
+```
+
+手作業の枠置き（従来 AnswerSheet DIY で GUI クリックしていた作業）を廃し，
+マークシートを記述した config そのものが読み取り定義を兼ねる（single source of truth）。
+
+### 公開スコープ
+
+- **マークシート生成**: TikZ での組版（テンプレート＋config）
+- **読み取り**: スキャン画像 → 回答 CSV
+
+### スコープ外（利用者側の責務。参考実装のみ同梱）
+
+- 問題内容・項目プール
+- 採点，IRT 等化，成績化
+
+---
+
+## 2. アーキテクチャ: 全部 R・1 パッケージ
+
+エンジンは **R パッケージ `tikzomr` に一本化**する。OMR エンジンを 2 本（R版/Python版）持つと
+保守が二重化し挙動がずれるため作らない。読者（R を学ぶ学生・教員）に最も自然で，
+`install_github` 1 行で入り，GUI はローカル起動でクラウドに答案を出さない（プライバシー安全）。
+
+```
+R パッケージ tikzomr
+  ├─ 関数 API : read_marksheet("scan.pdf", config) -> data.frame / CSV
+  │            make_marksheet(config) -> .tex（generator, v0.2）
+  └─ ローカル GUI : run_omr_app()  ← inst/app の Shiny をローカル起動（v0.3）
+
+install: remotes::install_github("kosugitti/tikzomr")
+```
+
+### なぜ R で完結できるか（必要な画像処理は軽い）
+
+全体ワープは不要で，点を写して局所サンプルするだけ。使うのは 3 つ。
+
+| 工程 | R の手段 |
+|---|---|
+| PDF → 画像 | `pdftools::pdf_render_page` |
+| 画像読み・二値化 | `magick` |
+| 四隅マークのブロブ検出 | `imager::label` / `EBImage::bwlabel` |
+| ホモグラフィ（4点→3x3行列） | base `solve()`（8元連立） |
+| 塗り率 | 窓の `mean()` |
+
+### Python 参照実装の位置づけ
+
+`python-reference/` に，先に作り検証済みの Python + OpenCV 版を残す。
+**正しく動くことを実証済みのオラクル**として，R 移植の答え合わせ（同一スキャンで同一結果か）に使う。
+公開パッケージには含めない（配布物は R パッケージのみ）。
+
+---
+
+## 3. single source of truth（config → 紙 と 読み取り定義）
+
+```
+layout config (list) ──┬─→ make_marksheet() ─→ marksheet.tex ─(lualatex)→ PDF → 印刷
+                       └─→ 読み取り定義（枠構造・格子）
+                                 │
+        ADF スキャン(200dpi) ─→ read_marksheet() ─┬─→ responses.csv
+                                                  └─→ review.csv（要目視）
+```
+
+現状 generator（make_marksheet）は未実装（v0.2）。今は `templates/marksheet_example.tex` を紙とし，
+その格子定数を config に写して reader が読む。
+
+---
+
+## 4. 確定した設計判断
+
+| 論点 | 決定 |
+|---|---|
+| 位置合わせ | 四隅フィデューシャル（黒四角，左上のみ大）＋太線枠の自己スケール。傾き・拡縮・平行移動に自動追従 |
+| 塗り判定 | 窓内の暗画素率（fill ratio）＋閾値（既定 0.20）。空欄と実マークが二峰分離することを実データで確認して決定 |
+| 天地判定 | 左上マークが最大 → 正立。違えば 180 度回転 |
+| 年度変化 | `n_questions` / `col_split` / `n_options` を config パラメータ化（問題数は 60〜80 と変わる。各問 1 マーク独立） |
+| 正答セット | 2 モード: (a) 予約 ID（例 999999）のスキャンを正答として抽出 (b) answer_key を直接指定 |
+| 出力形式 | `source,ID1..IDn,M1..Mq`（AnswerSheet DIY 互換） |
+
+### ID（学籍番号）の一般化モデル
+
+学籍番号は大学ごとに桁数・文字種・固定接頭辞が異なる。config で吸収する。
+
+```r
+id = list(
+  columns = list(          # マークする桁を列挙。各列に記号集合（桁数はここで可変）
+    list(symbols = 0:9),   # 1桁目
+    list(symbols = 0:9)    # 2桁目 …
+  ),
+  prefix = "HP",           # 印字のみ・マーク対象外（任意）。学部/年度コードも同類
+  orientation = "digits_in_rows"  # 旧様式は転置(digits_in_cols)
+)
+# 簡易糖衣: n_id_digits = 6 → 数字 0:9 の 6 列に展開
+```
+
+- **v0.1 対応**: 可変桁数の数字 ID ＋ 任意の固定接頭辞/接尾辞（印字のみ）
+- **将来拡張（設計だけ確保）**: 英字列 A-Z（26 バブル）を塗る様式。実装は後回し（紙面・UI が重い）
+
+### 既知の罠（記録）
+
+- AnswerSheet DIY の sheetdef 座標は **bottom-left 原点**。画像(top-left)系へ `y' = H - y` で反転しないとセルがずれる（2025 突合で発覚・解決）。
+- 検出枠はストローク外周 bbox。中心線は外周から stroke/2 内側で補正。
+- 位置決めマークのサイズは年度で違う（2026: 9–12.8mm / 2025 旧様式: 5.5mm）。検出下限を 4mm に緩めて両対応。
+
+---
+
+## 5. リポジトリ構成（目標）
+
+```
+tikz-omr/
+  DESCRIPTION, NAMESPACE           R パッケージメタ
+  R/                               エンジン（read_marksheet, config, fiducials, homography, decode）
+  man/                             roxygen 生成ドキュメント
+  inst/app/                        ローカル Shiny GUI（v0.3）
+  inst/templates/                  TikZ マークシート雛形（.tex）
+  inst/examples/                   サンプル（PDF, スキャン, responses.csv, overlay）
+  tests/testthat/                  回帰テスト（Python オラクルとの一致含む）
+  python-reference/                検証済み Python 実装（オラクル。配布物外）
+    omr/{config,fiducials,reader,batch}.py
+  README.md                        日英併記
+  CLAUDE.md / WORKLOG.md
+  LICENSE                          GPL-3
+```
+
+現在は `python-reference/` 相当（`omr/*.py`）とサンプルのみ配置済み。R パッケージ骨格はこれから。
+
+---
+
+## 6. データ形式
+
+- **config**: R の list（§4 の id ＋ answer ＋ option_labels）。座標は TikZ ローカル単位（1=0.98mm），reader は枠実測で自己スケール。
+- **responses.csv**: `source, ID1..IDn, M1..Mq`。空欄は空文字。source は `"<file> [i/N]"`。
+- **review.csv**: `source, id, problem, blanks`（「ID不明桁あり」「複数塗り:M12,M40」等）。
+
+---
+
+## 7. 検証状況
+
+- **2026 TikZ 様式（公開対象）**: 完璧。空欄 796 セル=0.00 / 実マーク 12 セル=0.32–0.92 と二峰分離，誤検出ゼロ。ID・解答とも正しく復元（Python 実装で確認）。
+- **2025 前期（TikZ 以前の旧 Keynote 横長）**: 幾何は完璧（正答シート ID 完全一致・解答 74/75，セル中心が全楕円中心に乗る）。学生の薄マーク（塗り率 0.15–0.19）は閾値 0.20 で取りこぼす＝旧様式のワーストケース。公開対象外のため深追いしない。
+- 検証素材: `Labo/Edu：講義資料/専修大学/…データ解析基礎`, `Dkiso1` 系に歴年スキャン多数 → 回帰テストに利用。
+
+---
+
+## 8. ロードマップ
+
+- **v0.1（現在）**: エンジンを R に移植（四隅検出・ホモグラフィ・塗り率）→ 2026 サンプルで Python オラクルと一致検証 → 雛形 .tex ＋ サンプル ＋ 日英 README → リポジトリ公開
+  - 最初の一歩 = **R での四隅検出＋ホモグラフィの spike**（`imager`/`EBImage` で安定検出できるか。ここだけ OpenCV ほど枯れていない唯一の懸念）
+- **v0.2**: `make_marksheet()` — config → marksheet.tex ＋ 読み取り定義の自動生成
+- **v0.3**: `run_omr_app()` — ローカル Shiny GUI（レイアウト定義・プレビュー・読み取り）
+- **v0.4**: 採点・正答 2 モードの参考実装，回帰テスト整備
+- docs/ 公開サイト，小杉サイトからの「TeX/TikZ でマークシートを作り読み取る一連のフリーソフトウェア」リンク
+
+---
+
+## 9. 開発規約
+
+- R パッケージ流儀（roxygen2, testthat, DESCRIPTION）。既存 exametrika 系と同様。
+- 依存: `pdftools`, `magick`, `imager` または `EBImage`（spike で選定）。
+- 読み取り基準解像度 200dpi。スキャンは ADF・A4。
+- コメント・ドキュメントは日本語。公開 README は日英併記。
+- 作業履歴は `WORKLOG.md`，状態要約はホーム `~/.claude/CLAUDE.md` の索引に 1 行。

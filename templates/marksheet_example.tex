@@ -1,0 +1,136 @@
+% マークシートDIY用マークシート
+% 心理学データ解析基礎1(心理学統計法) 2026年度 前期試験
+\documentclass[a4paper]{ltjsarticle}
+\usepackage{tikz}
+\usepackage[top=12mm,bottom=10mm,left=15mm,right=15mm]{geometry}
+\usepackage{luatexja-fontspec}
+
+\pagestyle{empty}
+
+% マークの寸法設定
+\newcommand{\markersize}{12.8mm}  % 左上位置決めマーク
+\newcommand{\smallmarker}{9mm} % 他の位置決めマーク
+
+\begin{document}
+
+\begin{tikzpicture}[remember picture, overlay]
+  % 位置決めマーク（四隅・四角）
+  % 左上（大きいマーク）
+  \fill ([xshift=10mm,yshift=-10mm]current page.north west) rectangle +(\markersize,-\markersize);
+  % 右上
+  \fill ([xshift=-10mm,yshift=-10mm]current page.north east) rectangle +(-\smallmarker,-\smallmarker);
+  % 左下
+  \fill ([xshift=10mm,yshift=10mm]current page.south west) rectangle +(\smallmarker,\smallmarker);
+  % 右下
+  \fill ([xshift=-10mm,yshift=10mm]current page.south east) rectangle +(-\smallmarker,\smallmarker);
+\end{tikzpicture}
+
+% 全体をTikZで配置（A4: 210mm x 297mm, 余白15mm = 有効領域180mm x 267mm）
+% 四隅の位置決めマークの内側に収まるよう，全体を98%縮小して左に寄せる
+\begin{tikzpicture}[x=0.98mm, y=0.98mm, shift={(-5,0)}]
+
+  % タイトル
+  \node[anchor=north] at (90, 0) {\LARGE\bfseries 心理学データ解析基礎1(心理学統計法)};
+  \node[anchor=north] at (90, -7) {\Large 2026年度　前期試験　マークシート};
+  \node[anchor=north] at (90, -13) {\small 2026年7月23日実施};
+
+  % ============ 手書き欄 ============
+  \node[anchor=north west] at (0, -25) {\small 学籍番号};
+  \draw[thick] (18, -30) -- (70, -30);
+  \node[anchor=north west] at (80, -25) {\small 氏名};
+  \draw[thick] (92, -30) -- (170, -30);
+
+  % ============ 学籍番号ブロック ============
+  \node[anchor=north west] at (0, -38) {\textbf{【学籍番号】} HP に続く6桁の数字をマークしてください};
+
+  % 学籍番号グリッド（6行×10列：6桁、各桁0-9）
+  \def\idtop{-53}
+  \def\idleft{5}
+  \def\idcolwidth{7.5}
+  \def\idrowheight{5.3}
+
+  % 列ヘッダー（1-9, 0）
+  \foreach \col in {1,...,9} {
+    \node at (\idleft+\col*\idcolwidth, \idtop+4) {\footnotesize\bfseries \col};
+  }
+  \node at (\idleft+10*\idcolwidth, \idtop+4) {\footnotesize\bfseries 0};
+
+  % 行ラベル（1桁目〜6桁目）と楕円マーク
+  \foreach \row in {1,...,6} {
+    \pgfmathsetmacro{\yposid}{\idtop-(\row-1)*\idrowheight}
+    \node[anchor=east] at (\idleft+5, \yposid) {\scriptsize \row 桁目};
+    \foreach \col in {1,...,9} {
+      \draw[gray, line width=0.5pt] (\idleft+\col*\idcolwidth, \yposid) ellipse (2mm and 1.5mm);
+    }
+    \draw[gray, line width=0.5pt] (\idleft+10*\idcolwidth, \yposid) ellipse (2mm and 1.5mm);
+    % 行の下に薄い点線
+    \pgfmathsetmacro{\lineposid}{\yposid-\idrowheight/2}
+    \draw[gray!90, dotted, line width=0.3pt] (\idleft-4, \lineposid) -- (\idleft+10.5*\idcolwidth-1, \lineposid);
+  }
+
+  % 学籍番号枠
+  \draw[thick] (\idleft-5, \idtop+7) rectangle (\idleft+10.5*\idcolwidth, \idtop-6*\idrowheight+2);
+
+  % ============ 記入上の注意ボックス ============
+  \draw[thick, rounded corners=3pt, fill=gray!10] (90, -45) rectangle (178, -80);
+  \node[anchor=north] at (134, -46) {\small\bfseries 記入上の注意};
+  \draw[thick] (92, -51) -- (176, -51);
+  \node[anchor=north west, text width=82mm, font=\scriptsize] at (92, -53) {%
+    \begin{itemize}
+      \setlength{\itemsep}{0pt}
+      \setlength{\parskip}{0pt}
+      \item 氏名と学籍番号を記入してください
+      \item 学籍番号をマーク欄にマークしてください
+      \item 学籍番号最後のアルファベットは不要です
+      \item 問題はM.1〜M.75の通し番号があります
+      \item 解答は対応する番号でマークしてください
+      \item マークは楕円を鉛筆でしっかり塗りつぶしてください
+      \item 訂正は消しゴムできれいに消してください
+    \end{itemize}
+  };
+
+  % ============ 解答ブロック ============
+  \node[anchor=north west] at (0, -85.15) {\textbf{【解答欄】} M1〜M75 について，1〜9および0から選んでマークしてください};
+
+  \def\anstop{-100}
+  \def\optwidth{7}
+  \def\labeloffset{10}
+  \def\ansrowheight{4.3}
+  \def\colgap{2.5}
+  \def\colwidth{83.5}
+
+  % 2列（M1-38, M39-75）。列ごとに行数が違う(38/37)ので開始・終了番号を指定
+  \foreach \colindex/\qstart/\qend in {0/1/38, 1/39/75} {
+    \pgfmathsetmacro{\colstart}{5+\colindex*(\colwidth+\colgap)}
+    \pgfmathtruncatemacro{\nrows}{\qend-\qstart+1}
+
+    % ヘッダー
+    \foreach \opt in {1,...,9} {
+      \node[font=\small\bfseries] at (\colstart+\labeloffset+\opt*\optwidth, \anstop+4) {\opt};
+    }
+    \node[font=\small\bfseries] at (\colstart+\labeloffset+10*\optwidth, \anstop+4) {0};
+
+    \foreach \i in {1,...,\nrows} {
+      \pgfmathtruncatemacro{\qnum}{\qstart+\i-1}
+      \pgfmathsetmacro{\ypos}{\anstop-(\i-1)*\ansrowheight}
+      \node[anchor=east, font=\scriptsize] at (\colstart+\labeloffset-2, \ypos) {M\qnum};
+      \foreach \opt in {1,...,9} {
+        \draw[gray, line width=0.4pt] (\colstart+\labeloffset+\opt*\optwidth, \ypos) ellipse (2.2mm and 1.6mm);
+      }
+      \draw[gray, line width=0.4pt] (\colstart+\labeloffset+10*\optwidth, \ypos) ellipse (2.2mm and 1.6mm);
+      % 行の下に薄い点線
+      \pgfmathsetmacro{\linepos}{\ypos-\ansrowheight/2}
+      \draw[gray!90, dotted, line width=0.3pt] (\colstart+1, \linepos) -- (\colstart+\labeloffset+10.5*\optwidth, \linepos);
+    }
+
+    % 列枠
+    \pgfmathsetmacro{\colbottom}{\anstop-\nrows*\ansrowheight+2}
+    \draw[thick] (\colstart, \anstop+6) rectangle (\colstart+\labeloffset+10.5*\optwidth, \colbottom);
+  }
+
+  % 注意書き（解答欄のすぐ下）
+  \node[anchor=north west] at (0, -262) {\small ※ マークは楕円を鉛筆でしっかり塗りつぶしてください。訂正する場合は消しゴムできれいに消してください。};
+
+\end{tikzpicture}
+
+\end{document}
