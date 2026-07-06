@@ -80,8 +80,9 @@ layout config (list) ──┬─→ make_marksheet() ─→ marksheet.tex ─(l
                                                   └─→ review.csv（要目視）
 ```
 
-現状 generator（make_marksheet）は未実装（v0.2）。今は `templates/marksheet_example.tex` を紙とし，
-その格子定数を config に写して reader が読む。
+generator（`make_marksheet()`）は実装済み。`default_config()` から `.tex` と読み取り定義
+（marks/fiducials CSV）を同時に生成し，生成 marks は同梱 example と <0.1mm で一致（検証済み）。
+生成した `.tex` を LuaLaTeX で **2 回**組版すると，reader のマークが全楕円中心に乗る。
 
 ---
 
@@ -120,6 +121,7 @@ id = list(
 - AnswerSheet DIY の sheetdef 座標は **bottom-left 原点**。画像(top-left)系へ `y' = H - y` で反転しないとセルがずれる（2025 突合で発覚・解決）。
 - 検出枠はストローク外周 bbox。中心線は外周から stroke/2 内側で補正。
 - 位置決めマークのサイズは年度で違う（2026: 9–12.8mm / 2025 旧様式: 5.5mm）。検出下限を 4mm に緩めて両対応。
+- 生成 `.tex` は `remember picture, overlay` を使うため **LuaLaTeX を 2 回**通す必要がある（初回は `current page` 位置が未確定で四隅がずれる）。README・生成物の運用に明記。
 
 ---
 
@@ -163,11 +165,12 @@ tikz-omr/
 
 ## 8. ロードマップ
 
-- **v0.1（現在）**: エンジンを R に移植（四隅検出・ホモグラフィ・塗り率）→ 2026 サンプルで Python オラクルと一致検証 → 雛形 .tex ＋ サンプル ＋ 日英 README → リポジトリ公開
-  - 最初の一歩 = **R での四隅検出＋ホモグラフィの spike**（`imager`/`EBImage` で安定検出できるか。ここだけ OpenCV ほど枯れていない唯一の懸念）
-- **v0.2**: `make_marksheet()` — config → marksheet.tex ＋ 読み取り定義の自動生成
+- **v0.1（完了）**: R エンジン（`read_marksheet`/`read_marksheet_batch`），2026 サンプルで
+  Python オラクルと一致，パッケージ骨格，回帰テスト（read 11 本），日英 README，R CMD INSTALL 通過。
+  R spike（四隅検出＋ホモグラフィ）成功済み＝唯一の懸念は解消。
+- **v0.2（生成器は実装済み）**: `make_marksheet()` — config → `.tex` ＋ 読み取り定義。生成テスト 10 本。
+  残: 英字 ID 列 A-Z，正答 2 モード（予約 ID スキャン / CSV），採点参考実装。
 - **v0.3**: `run_omr_app()` — ローカル Shiny GUI（レイアウト定義・プレビュー・読み取り）
-- **v0.4**: 採点・正答 2 モードの参考実装，回帰テスト整備
 - docs/ 公開サイト，小杉サイトからの「TeX/TikZ でマークシートを作り読み取る一連のフリーソフトウェア」リンク
 
 ---

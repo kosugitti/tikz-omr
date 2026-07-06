@@ -60,6 +60,20 @@ of truth とする自作ツールを設計。データ解析基礎（`01_教育/
 含意: R 版 reader は **四隅ホモグラフィ＋config 座標**（枠検出非依存の汎用筋）で書ける。
 generator が page 座標を吐く方針と噛み合う。次は R パッケージ骨格と reader 移植。
 
+### R パッケージ v0.1 ＋ 生成器（同日）
+
+- **R パッケージ骨格**: DESCRIPTION（`tikzomr`）/NAMESPACE/R/man（roxygen rd）/tests。`R CMD INSTALL` 通過。
+- **reader 移植**: `R/fiducials.R`（射影法・spike 移植），`R/homography.R`（`solve()`），
+  `R/reader.R`（`read_marksheet`/`read_marksheet_batch`/`example_layout`，四隅→page-mm→スキャンの
+  ホモグラフィ→塗り率→デコード）。座標基盤 `inst/examples/*.marks.csv`/`*.fiducials.csv`（page-mm）を同梱。
+  2026 サンプルで **Python オラクルと完全一致**（ID=123456・6 マーク）。
+- **生成器**: `R/generator.R`（`make_marksheet`/`default_config`）。config→`.tex`＋marks/fiducials を
+  すべて絶対 page-mm で生成。生成 marks は同梱 example と **<0.1mm 一致**。生成 `.tex` を LuaLaTeX で
+  **2 回**組版→200dpi 描画→reader のマークが全楕円中心に乗ることを overlay で確認。
+  → config が紙と読み取り定義の単一の源であることが閉じた。
+- **テスト**: read 11 本＋generator 10 本＝計 21 本すべて通過。
+- **罠**: `remember picture, overlay` は LuaLaTeX 2 パス必須（初回は四隅が 0 個検出＝位置未確定）。
+
 ### 未解決・メモ
 
 - R での四隅ブロブ検出の安定性が唯一の未知数（OpenCV ほど枯れていない）。
