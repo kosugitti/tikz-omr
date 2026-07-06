@@ -1,0 +1,23 @@
+Package: tikzomr
+Title: Read TikZ-Generated Mark Sheets into CSV
+Version: 0.1.0
+Authors@R:
+    person("Koji E.", "Kosugi", email = "kosugitti@gmail.com",
+           role = c("aut", "cre"))
+Description: Create mark sheets with TeX/TikZ and read scanned sheets into a
+    response data frame. Uses four corner fiducials for alignment (a projective
+    homography solved from the fiducial correspondence) and a fill-ratio test
+    per bubble. Runs entirely locally, so answer sheets never leave the machine.
+    The reading definition is derived from the same layout used to typeset the
+    sheet, so there is no manual placement of read positions.
+License: GPL-3
+Encoding: UTF-8
+Imports:
+    magick,
+    pdftools,
+    utils
+Suggests:
+    testthat (>= 3.0.0)
+Roxygen: list(markdown = TRUE)
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0

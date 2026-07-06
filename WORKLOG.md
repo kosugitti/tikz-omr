@@ -48,6 +48,18 @@ of truth とする自作ツールを設計。データ解析基礎（`01_教育/
 3. `templates`/`examples` を `inst/` 配下へ移す。
 4. GitHub 公開（`gh repo create kosugitti/tikz-omr`）は spike とパッケージ骨格が最小限動いてから。
 
+### R spike 成功（同日）— R 一本の道が確定
+
+`magick` のみで，Python オラクルと一致（`01_教育/2026_データ解析基礎/omr/spike_r.R`）。
+
+- 四隅検出: **隅近傍の暗画素射影で矩形を切る**方式（OpenCV 輪郭検出不要）。TL/TR/BL/BR とも Python と誤差 ≤1px。
+- 塗り率: 塗りセル 0.901（PY 0.921），空セル 0.000（PY 0.000）。
+- ホモグラフィ: base `solve()` で 4 点 DLT，round-trip 誤差ゼロ。
+- 依存は `magick` だけ（`imager`/`EBImage` すら不要）。`pdftools` は PDF 描画用に別途。
+
+含意: R 版 reader は **四隅ホモグラフィ＋config 座標**（枠検出非依存の汎用筋）で書ける。
+generator が page 座標を吐く方針と噛み合う。次は R パッケージ骨格と reader 移植。
+
 ### 未解決・メモ
 
 - R での四隅ブロブ検出の安定性が唯一の未知数（OpenCV ほど枯れていない）。

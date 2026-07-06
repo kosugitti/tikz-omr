@@ -1,0 +1,7 @@
+^python-reference$
+^CLAUDE\.md$
+^WORKLOG\.md$
+^docs$
+^.*\.Rproj$
+^\.Rproj\.user$
+^inst/examples/overlay_.*\.png$
