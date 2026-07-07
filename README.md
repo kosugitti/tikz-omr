@@ -84,6 +84,20 @@ review <- attr(tbl, "review")   # 要目視（複数塗り・ID 不明）/ items
 
 出力 / output: `source, ID1..IDn, M1..Mq`（AnswerSheet DIY 互換 / compatible）。
 
+固定接頭辞 / fixed prefix: 学部コードなど全員共通の先頭文字は印字のみ・マーク対象外にできる。
+`cfg$id$prefix <- "HP"` とすると，紙面に「先頭に HP」と刷られ，読み取り時にフル学籍番号
+`id` 列（例 `HP123456`）が復元される（接頭辞なしなら従来どおり）。
+
+### 3. GUI で行う / Use the local GUI
+
+```r
+run_omr_app()   # ブラウザで「マークシート工房」が開く（要 shiny, DT）
+```
+
+生成（config → `.tex`/PDF/読み取り定義）と読み取り（スキャン → responses.csv/review.csv）を
+GUI で行える。すべてこの端末で動き，答案画像は外部に送信されない。
+A local Shiny GUI for both generating sheets and reading scans; nothing leaves the machine.
+
 ### すぐ試す / Try the bundled example
 
 ```r
@@ -97,12 +111,13 @@ res <- read_marksheet(
 
 ## 状態 / Status
 
-v0.1。読み取りエンジン（`read_marksheet` / `read_marksheet_batch`）と生成器
-（`make_marksheet`）が動作，回帰テスト通過。検証済み Python 実装は `python-reference/`
-にオラクルとして保持（配布物外）。
+読み取りエンジン（`read_marksheet` / `read_marksheet_batch`），生成器（`make_marksheet`），
+固定接頭辞 ID，ローカル GUI（`run_omr_app`）が動作，回帰テスト通過。検証済み Python 実装は
+`python-reference/` にオラクルとして保持（配布物外）。
 
-- v0.2: レイアウトの拡充（英字 ID 列，正答 2 モード）
-- v0.3: `run_omr_app()`（ローカル Shiny GUI）
+- v0.2（実装済み）: 固定接頭辞 ID（英字含む・印字のみ）
+- v0.3（実装済み）: `run_omr_app()`（ローカル Shiny GUI「マークシート工房」）
+- 今後 / next: 英字 ID 列 A-Z を塗る様式（Scantron 型），正答 2 モード，採点参考実装
 
 ### 検証 / Validation
 

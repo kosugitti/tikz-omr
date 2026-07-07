@@ -16,7 +16,8 @@ read_marksheet_batch(pdf, layout, dpi = 200, ...)
 \item{...}{\code{read_marksheet()} に渡す引数。}
 }
 \value{
-data.frame（\verb{source, ID1.., M1..}）。属性 \code{"review"} に要目視の data.frame。
+data.frame（\verb{source, ID1.., M1..}）。属性 \code{"review"} に要目視の data.frame，
+属性 \code{"fills"} に全ページ・全マークの塗り率（塗り率分布の可視化用）。
 }
 \description{
 複数ページ（PDF）を一括読み取りして応答表を返す

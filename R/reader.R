@@ -136,6 +136,7 @@ read_marksheet <- function(input, layout, page = 1L, dpi = 200,
     id_incomplete = any(is.na(vals[grepl("^ID", names(vals))])),
     blanks = n_blank
   )
+  attr(out, "fills") <- fills   # 全マークの塗り率（二峰分布の可視化・診断用）
   out
 }
 
@@ -145,13 +146,15 @@ read_marksheet <- function(input, layout, page = 1L, dpi = 200,
 #' @param layout `example_layout()` と同形。
 #' @param dpi 描画解像度。
 #' @param ... `read_marksheet()` に渡す引数。
-#' @return data.frame（`source, ID1.., M1..`）。属性 `"review"` に要目視の data.frame。
+#' @return data.frame（`source, ID1.., M1..`）。属性 `"review"` に要目視の data.frame，
+#'   属性 `"fills"` に全ページ・全マークの塗り率（塗り率分布の可視化用）。
 #' @export
 read_marksheet_batch <- function(pdf, layout, dpi = 200, ...) {
   npages <- pdftools::pdf_info(pdf)$pages
   base <- basename(pdf)
   rows <- vector("list", npages)
   reviews <- list()
+  fills_all <- numeric(0)
   for (i in seq_len(npages)) {
     r <- tryCatch(
       read_marksheet(pdf, layout, page = i, dpi = dpi, ...),
@@ -166,6 +169,7 @@ read_marksheet_batch <- function(pdf, layout, dpi = 200, ...) {
       next
     }
     rv <- attr(r, "review")
+    fills_all <- c(fills_all, attr(r, "fills"))
     rows[[i]] <- cbind(source = src, r, stringsAsFactors = FALSE)
     probs <- character(0)
     if (isTRUE(rv$id_incomplete)) probs <- c(probs, "ID不明桁あり")
@@ -185,5 +189,6 @@ read_marksheet_batch <- function(pdf, layout, dpi = 200, ...) {
   })
   out <- do.call(rbind, rows)
   attr(out, "review") <- if (length(reviews)) do.call(rbind, reviews) else NULL
+  attr(out, "fills") <- fills_all
   out
 }

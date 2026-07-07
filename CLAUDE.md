@@ -176,7 +176,14 @@ tikz-omr/
   固定接頭辞（英字含む・印字のみ）対応済み＝`id$label`/`id$prefix` 分離，reader が
   フル学籍番号 `id` 列を復元（既定は従来どおり）。生成/読取テスト計 25 本超。
   残: 英字 ID 列 A-Z を **塗る** 様式（Scantron 型），正答 2 モード（予約 ID スキャン / CSV），採点参考実装。
-- **v0.3**: `run_omr_app()` — ローカル Shiny GUI（レイアウト定義・プレビュー・読み取り）
+- **v0.3（実装済み）**: `run_omr_app()` — ローカル Shiny GUI「マークシート工房」。
+  `inst/app/app.R` に本体（生成タブ＝config→プレビュー/.tex/PDF/読取定義，読取タブ＝スキャン
+  →responses.csv/review.csv＋サマリータイル＋塗り率二峰ヒストグラム），`R/app.R` の
+  `run_omr_app()` が `system.file("app")` を `shiny::runApp()`。依存 shiny/DT は Suggests＋
+  requireNamespace ガード。PDF は lualatex 検出時のみ。意匠は四隅マーク／楕円バブル／
+  塗り率二峰／読取赤ドットを素材にした計器風・ライト/ダーク両対応。sample_scan で
+  id=HP123456 まで実起動検証済み（chromote ヘッドレス撮影）。塗り率分布用に reader へ
+  `attr "fills"` を追加（非破壊）。
 - docs/ 公開サイト，小杉サイトからの「TeX/TikZ でマークシートを作り読み取る一連のフリーソフトウェア」リンク
 
 ---
