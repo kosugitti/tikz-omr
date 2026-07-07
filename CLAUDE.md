@@ -103,18 +103,22 @@ generator（`make_marksheet()`）は実装済み。`default_config()` から `.t
 
 ```r
 id = list(
-  columns = list(          # マークする桁を列挙。各列に記号集合（桁数はここで可変）
-    list(symbols = 0:9),   # 1桁目
-    list(symbols = 0:9)    # 2桁目 …
-  ),
-  prefix = "HP",           # 印字のみ・マーク対象外（任意）。学部/年度コードも同類
-  orientation = "digits_in_rows"  # 旧様式は転置(digits_in_cols)
+  n_digits = 6, symbols = c(1:9, 0),  # マークする数字桁（現行の主様式）
+  label  = "【学籍番号】",             # ブロック見出し（旧 prefix）
+  prefix = "HP",                       # 固定接頭辞（印字のみ・マーク対象外，任意）
+  ...                                  # x0/colw/y0/rowh 等の座標
 )
-# 簡易糖衣: n_id_digits = 6 → 数字 0:9 の 6 列に展開
 ```
 
-- **v0.1 対応**: 可変桁数の数字 ID ＋ 任意の固定接頭辞/接尾辞（印字のみ）
-- **将来拡張（設計だけ確保）**: 英字列 A-Z（26 バブル）を塗る様式。実装は後回し（紙面・UI が重い）
+- **v0.1 対応**: 可変桁数の数字 ID。
+- **v0.2 対応（実装済み）**: 固定接頭辞（英字を含む・印字のみ・マーク対象外）。
+  `id$label`（見出し）と `id$prefix`（固定接頭辞）を分離。generator は見出し行に
+  「（先頭に HP が付きます・マーク不要）」と印字し，バブル配置・幾何は不変。
+  `make_marksheet()` は接頭辞を戻り値 `id_prefix` に載せ，そのまま `read_marksheet()` の
+  `layout` に渡せる。reader は接頭辞があるとき先頭にフル学籍番号 `id` 列（接頭辞＋マーク桁）を
+  追加，接頭辞なしの既定では出力・挙動とも従来と一切変わらない。
+- **将来拡張（設計だけ確保）**: 英字列 A-Z（26 バブル）を **塗る** 様式。Scantron 型の
+  縦ストラップ配置が要るため実装は後回し（紙面・UI が重い）。
 
 ### 既知の罠（記録）
 
@@ -168,8 +172,10 @@ tikz-omr/
 - **v0.1（完了）**: R エンジン（`read_marksheet`/`read_marksheet_batch`），2026 サンプルで
   Python オラクルと一致，パッケージ骨格，回帰テスト（read 11 本），日英 README，R CMD INSTALL 通過。
   R spike（四隅検出＋ホモグラフィ）成功済み＝唯一の懸念は解消。
-- **v0.2（生成器は実装済み）**: `make_marksheet()` — config → `.tex` ＋ 読み取り定義。生成テスト 10 本。
-  残: 英字 ID 列 A-Z，正答 2 モード（予約 ID スキャン / CSV），採点参考実装。
+- **v0.2（進行中）**: `make_marksheet()` — config → `.tex` ＋ 読み取り定義。
+  固定接頭辞（英字含む・印字のみ）対応済み＝`id$label`/`id$prefix` 分離，reader が
+  フル学籍番号 `id` 列を復元（既定は従来どおり）。生成/読取テスト計 25 本超。
+  残: 英字 ID 列 A-Z を **塗る** 様式（Scantron 型），正答 2 モード（予約 ID スキャン / CSV），採点参考実装。
 - **v0.3**: `run_omr_app()` — ローカル Shiny GUI（レイアウト定義・プレビュー・読み取り）
 - docs/ 公開サイト，小杉サイトからの「TeX/TikZ でマークシートを作り読み取る一連のフリーソフトウェア」リンク
 
@@ -182,3 +188,9 @@ tikz-omr/
 - 読み取り基準解像度 200dpi。スキャンは ADF・A4。
 - コメント・ドキュメントは日本語。公開 README は日英併記。
 - 作業履歴は `WORKLOG.md`，状態要約はホーム `~/.claude/CLAUDE.md` の索引に 1 行。
+
+## 索引ステータス退避 (2026-07-07)
+
+ホームCLAUDE.md索引の肥大化解消のため，圧縮前のステータス全文をここへ退避。以後の最新状況はWORKLOG.mdと本ファイル上部を参照。
+
+TikZで作ったマークシートをスキャン→CSV化するフリーソフト。旧AnswerSheet DIY(macOS専用・更新停止)を脱し，config を single source of truth に。スコープ=生成(TikZ)＋読取，採点/IRTは対象外。**エンジンは全部R・1パッケージ tikzomr に一本化決定**(関数API＋同梱ローカルShiny，install_github配布，クラウドに答案を出さない)。Python参照実装(python-reference/omr)は検証済オラクルとして保持。検証: 2026 TikZサンプルで完璧(ID=123456・塗り率二峰分離0.00/0.32-0.92・誤検出0)，2025旧様式でも幾何実証(座標bottom-left罠を解決・正答シート74/75)。ID一般化=可変桁数＋固定接頭辞印字(英字A-Zは設計のみ)。ライセンスGPL-3・README日英。**R spike成功(magickのみで四隅検出射影法＋ホモグラフィsolve()がPythonと一致・唯一の懸念解消)→v0.1 Rパッケージ完成**: read_marksheet/read_marksheet_batch/make_marksheet(config→.tex＋読取定義,絶対page-mm,生成marksは同梱と<0.1mm一致)/example_layout。R CMD INSTALL通過・回帰テスト21本全通過。生成.texはLuaLaTeX2パス必須(remember picture)。次=GitHub公開(gh repo create kosugitti/tikz-omr)→v0.2英字ID/正答2モード→v0.3 run_omr_app(ローカルShiny)。詳細→Git/tikz-omr/{CLAUDE,WORKLOG}.md

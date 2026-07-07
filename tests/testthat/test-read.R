@@ -37,3 +37,27 @@ test_that("2026 サンプルの読み取りがオラクルと一致する", {
     c(M1 = "8", M2 = "2", M3 = "9", M4 = "3", M51 = "5", M60 = "8")
   )
 })
+
+test_that("固定接頭辞: id_prefix 指定でフル学籍番号 id 列が付く", {
+  scan <- system.file("examples", "sample_scan.jpg", package = "tikzomr")
+  lay <- example_layout()
+
+  # 既定（接頭辞なし）は id 列を出さず，従来出力のまま
+  r0 <- read_marksheet(scan, lay)
+  expect_false("id" %in% names(r0))
+
+  # 引数で接頭辞指定 → 先頭に id 列，マーク桁 ID1..6 は不変
+  r1 <- read_marksheet(scan, lay, id_prefix = "HP")
+  expect_equal(names(r1)[1], "id")
+  expect_equal(r1$id, "HP123456")
+  expect_equal(paste0(unlist(r1[paste0("ID", 1:6)]), collapse = ""), "123456")
+})
+
+test_that("固定接頭辞: make_marksheet の layout から自動で引き継ぐ", {
+  scan <- system.file("examples", "sample_scan.jpg", package = "tikzomr")
+  cfg <- default_config(); cfg$id$prefix <- "HP"
+  # make_marksheet の marks/fiducials は同梱 example と一致するので layout に使える
+  lay <- make_marksheet(cfg)
+  r <- read_marksheet(scan, lay)              # id_prefix 引数なしでも layout 由来で付く
+  expect_equal(r$id, "HP123456")
+})

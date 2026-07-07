@@ -38,3 +38,21 @@ test_that(".tex が生成され主要要素を含む", {
   expect_true(grepl("remember picture", g$tex))
   expect_true(grepl("ellipse", g$tex))
 })
+
+test_that("固定接頭辞: 既定は接頭辞なし・見出しは label", {
+  dc <- default_config()
+  expect_null(dc$id$prefix)
+  expect_equal(dc$id$label, "【学籍番号】")
+  g <- make_marksheet(dc)
+  expect_equal(g$id_prefix, "")            # 接頭辞なしは空文字
+  expect_false(grepl("先頭に", g$tex))     # 接頭辞の注記は出ない
+})
+
+test_that("固定接頭辞: prefix を設定すると印字され layout に載る", {
+  cfg <- default_config(); cfg$id$prefix <- "HP"
+  g <- make_marksheet(cfg)
+  expect_equal(g$id_prefix, "HP")
+  expect_true(grepl("先頭に HP", g$tex))   # 見出し行に印字
+  # 接頭辞はマーク対象外: marks 行数は接頭辞なしと同じ
+  expect_equal(nrow(g$marks), nrow(make_marksheet(default_config())$marks))
+})

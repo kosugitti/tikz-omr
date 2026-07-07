@@ -11,7 +11,8 @@ read_marksheet(
   dpi = 200,
   dark = 140,
   fill_thr = 0.2,
-  win_mm = c(1.1, 0.8)
+  win_mm = c(1.1, 0.8),
+  id_prefix = NULL
 )
 }
 \arguments{
@@ -28,10 +29,15 @@ read_marksheet(
 \item{fill_thr}{塗りとみなす塗り率の下限（既定 0.20）。}
 
 \item{win_mm}{サンプリング窓の半径（mm）。\code{c(横, 縦)}。}
+
+\item{id_prefix}{学籍番号の固定接頭辞（印字のみ・マーク対象外，例 \code{"HP"}）。
+\code{NULL}（既定）なら \code{layout$id_prefix} を使う。空文字なら接頭辞なし。非空なら
+先頭にフル学籍番号 \code{id}（接頭辞＋マーク桁の連結）列を追加する。既定では
+出力・挙動は従来と一切変わらない。}
 }
 \value{
-1 行の data.frame（列 = ID1.., M1..）。属性 \code{"review"} に
-要目視情報（複数塗り・空欄数）を格納。
+1 行の data.frame（列 = ID1.., M1..，接頭辞指定時は先頭に \code{id}）。
+属性 \code{"review"} に要目視情報（複数塗り・空欄数）を格納。
 }
 \description{
 マークシート1枚を読み取る

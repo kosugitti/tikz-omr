@@ -21,7 +21,8 @@ make_marksheet(
 \item{fiducials_path}{書き出す fiducials CSV のパス（NULL なら書き出さない）。}
 }
 \value{
-\code{list(tex=, marks=, fiducials=)}。marks/fiducials は \code{read_marksheet()} の layout に使える。
+\code{list(tex=, marks=, fiducials=, id_prefix=)}。marks/fiducials/id_prefix は
+そのまま \code{read_marksheet()} の \code{layout} に渡せる（接頭辞が自動で引き継がれる）。
 }
 \description{
 同じ config から，組版用 \code{.tex} と，読み取り用の \code{marks}（field,value,x_mm,y_mm）・

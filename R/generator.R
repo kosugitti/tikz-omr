@@ -18,7 +18,8 @@ default_config <- function() {
     id = list(n_digits = 6, symbols = c(1:9, 0),
               x0 = 30.705, colw = 7.336, y0 = 68.75, rowh = 5.176,
               header_dy = 5,
-              prefix = "【学籍番号】"),
+              label = "【学籍番号】",  # ブロック見出し
+              prefix = NULL),          # 固定接頭辞（印字のみ・マーク対象外，例 "HP"）
     answer = list(n_questions = 75, col_split = list(c(1, 38), c(39, 75)),
                   symbols = c(1:9, 0), col_x0 = c(39.956, 124.258),
                   optw = 6.856, y0 = 114.78, rowh = 4.212, header_dy = 5)
@@ -101,8 +102,11 @@ default_config <- function() {
 
   # ID ブロック
   id <- cfg$id
+  id_label <- if (!is.null(id$label)) id$label else "【学籍番号】"
+  head_txt <- if (!is.null(id$prefix) && nzchar(id$prefix))
+    paste0(id_label, "（先頭に ", id$prefix, " が付きます・マーク不要）") else id_label
   add("  \\node[anchor=west,font=\\bfseries] at ", .pt(id$x0 - 18, 58),
-      " {", id$prefix, "};")
+      " {", head_txt, "};")
   for (j in seq_along(id$symbols)) {
     x <- id$x0 + (j - 1) * id$colw
     add("  \\node[font=\\footnotesize\\bfseries] at ", .pt(x, id$y0 - id$header_dy),
@@ -159,7 +163,8 @@ default_config <- function() {
 #' @param tex_path 書き出す `.tex` のパス（NULL なら書き出さない）。
 #' @param marks_path 書き出す marks CSV のパス（NULL なら書き出さない）。
 #' @param fiducials_path 書き出す fiducials CSV のパス（NULL なら書き出さない）。
-#' @return `list(tex=, marks=, fiducials=)`。marks/fiducials は `read_marksheet()` の layout に使える。
+#' @return `list(tex=, marks=, fiducials=, id_prefix=)`。marks/fiducials/id_prefix は
+#'   そのまま `read_marksheet()` の `layout` に渡せる（接頭辞が自動で引き継がれる）。
 #' @export
 make_marksheet <- function(config = default_config(), tex_path = NULL,
                            marks_path = NULL, fiducials_path = NULL) {
@@ -168,5 +173,6 @@ make_marksheet <- function(config = default_config(), tex_path = NULL,
   if (!is.null(tex_path)) writeLines(tex, tex_path)
   if (!is.null(marks_path)) utils::write.csv(geo$marks, marks_path, row.names = FALSE)
   if (!is.null(fiducials_path)) utils::write.csv(geo$fiducials, fiducials_path, row.names = FALSE)
-  list(tex = tex, marks = geo$marks, fiducials = geo$fiducials)
+  id_prefix <- if (!is.null(config$id$prefix)) config$id$prefix else ""
+  list(tex = tex, marks = geo$marks, fiducials = geo$fiducials, id_prefix = id_prefix)
 }

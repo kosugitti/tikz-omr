@@ -71,11 +71,16 @@ example_layout <- function() {
 #' @param dark 暗画素閾値（既定 140）。
 #' @param fill_thr 塗りとみなす塗り率の下限（既定 0.20）。
 #' @param win_mm サンプリング窓の半径（mm）。`c(横, 縦)`。
-#' @return 1 行の data.frame（列 = ID1.., M1..）。属性 `"review"` に
-#'   要目視情報（複数塗り・空欄数）を格納。
+#' @param id_prefix 学籍番号の固定接頭辞（印字のみ・マーク対象外，例 `"HP"`）。
+#'   `NULL`（既定）なら `layout$id_prefix` を使う。空文字なら接頭辞なし。非空なら
+#'   先頭にフル学籍番号 `id`（接頭辞＋マーク桁の連結）列を追加する。既定では
+#'   出力・挙動は従来と一切変わらない。
+#' @return 1 行の data.frame（列 = ID1.., M1..，接頭辞指定時は先頭に `id`）。
+#'   属性 `"review"` に要目視情報（複数塗り・空欄数）を格納。
 #' @export
 read_marksheet <- function(input, layout, page = 1L, dpi = 200,
-                           dark = 140, fill_thr = 0.20, win_mm = c(1.1, 0.8)) {
+                           dark = 140, fill_thr = 0.20, win_mm = c(1.1, 0.8),
+                           id_prefix = NULL) {
   gm <- .load_gray(input, page = page, dpi = dpi)
 
   # 天地補正: 左上マークが最大でなければ 180 度回転
@@ -115,6 +120,16 @@ read_marksheet <- function(input, layout, page = 1L, dpi = 200,
   }
 
   out <- as.data.frame(as.list(vals), stringsAsFactors = FALSE, check.names = FALSE)
+
+  # 固定接頭辞: 引数優先，なければ layout 由来。非空ならフル学籍番号 id 列を先頭に足す
+  if (is.null(id_prefix)) id_prefix <- layout$id_prefix
+  if (!is.null(id_prefix) && nzchar(id_prefix)) {
+    id_cols <- names(vals)[grepl("^ID", names(vals))]
+    digits <- vals[id_cols]; digits[is.na(digits)] <- ""
+    full_id <- paste0(id_prefix, paste0(digits, collapse = ""))
+    out <- cbind(id = full_id, out, stringsAsFactors = FALSE)
+  }
+
   n_blank <- sum(is.na(vals[grepl("^M", names(vals))]))
   attr(out, "review") <- list(
     multi = multi,
