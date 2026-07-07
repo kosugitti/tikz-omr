@@ -69,7 +69,9 @@ example_layout <- function() {
 #' @param page PDF の場合のページ番号。
 #' @param dpi PDF 描画解像度。
 #' @param dark 暗画素閾値（既定 140）。
-#' @param fill_thr 塗りとみなす塗り率の下限（既定 0.20）。
+#' @param fill_thr 塗りとみなす塗り率の下限（既定 0.13）。鉛筆マークは薄いので既定を
+#'   低めに取る。実データ（86 枚）では 0.10–0.13 で誤検出ゼロのまま一致 99% 超，
+#'   0.08 を割ると二峰の谷を越えて誤検出が出始める。清刷り前提なら 0.20 でもよい。
 #' @param win_mm サンプリング窓の半径（mm）。`c(横, 縦)`。
 #' @param id_prefix 学籍番号の固定接頭辞（印字のみ・マーク対象外，例 `"HP"`）。
 #'   `NULL`（既定）なら `layout$id_prefix` を使う。空文字なら接頭辞なし。非空なら
@@ -79,7 +81,7 @@ example_layout <- function() {
 #'   属性 `"review"` に要目視情報（複数塗り・空欄数）を格納。
 #' @export
 read_marksheet <- function(input, layout, page = 1L, dpi = 200,
-                           dark = 140, fill_thr = 0.20, win_mm = c(1.1, 0.8),
+                           dark = 140, fill_thr = 0.13, win_mm = c(1.1, 0.8),
                            id_prefix = NULL) {
   gm <- .load_gray(input, page = page, dpi = dpi)
 
@@ -140,55 +142,92 @@ read_marksheet <- function(input, layout, page = 1L, dpi = 200,
   out
 }
 
-#' 複数ページ（PDF）を一括読み取りして応答表を返す
+# 対応する画像拡張子（PDF は別扱い）
+.img_ext <- "\\.(jpe?g|png|tiff?|bmp|gif)$"
+
+# 入力（PDF パス / フォルダ / ファイルパスの vector）を読み取り単位に展開する。
+# 各単位 = list(path=, page=, source=)。PDF は 1 ページ 1 単位（source="base [i/N]"），
+# 画像は 1 ファイル 1 単位（source=basename）。
+.expand_sources <- function(input) {
+  # 単一パスがフォルダなら中身を列挙
+  if (length(input) == 1L && dir.exists(input)) {
+    fs <- list.files(input, pattern = paste0("(", .img_ext, "|\\.pdf$)"),
+                     ignore.case = TRUE, full.names = TRUE)
+    input <- sort(fs)
+  }
+  if (length(input) == 0L) stop("読み取り対象のファイルが見つかりません。", call. = FALSE)
+  jobs <- list()
+  for (p in input) {
+    if (grepl("\\.pdf$", p, ignore.case = TRUE)) {
+      np <- pdftools::pdf_info(p)$pages
+      bn <- basename(p)
+      for (i in seq_len(np))
+        jobs[[length(jobs) + 1]] <- list(path = p, page = i,
+          source = sprintf("%s [%d/%d]", bn, i, np))
+    } else {
+      jobs[[length(jobs) + 1]] <- list(path = p, page = 1L, source = basename(p))
+    }
+  }
+  jobs
+}
+
+#' PDF・フォルダ・ファイル群を一括読み取りして応答表を返す
 #'
-#' @param pdf PDF パス（1 ページ 1 枚）。
+#' 入力は次のいずれでもよい。
+#' \itemize{
+#'   \item まとめ PDF 1 枚（1 ページ 1 枚）。`source` は `"file.pdf [i/N]"`。
+#'   \item フォルダのパス。中の画像（jpg/png/tiff…）と PDF をすべて読む。
+#'   \item ファイルパスの文字列ベクトル（画像・PDF 混在可）。
+#' }
+#'
+#' @param input PDF パス，フォルダのパス，またはファイルパスの vector。
 #' @param layout `example_layout()` と同形。
-#' @param dpi 描画解像度。
-#' @param ... `read_marksheet()` に渡す引数。
+#' @param dpi PDF 描画解像度。
+#' @param ... `read_marksheet()` に渡す引数（`fill_thr`, `dark`, `id_prefix` 等）。
 #' @return data.frame（`source, ID1.., M1..`）。属性 `"review"` に要目視の data.frame，
-#'   属性 `"fills"` に全ページ・全マークの塗り率（塗り率分布の可視化用）。
+#'   `"fills"` に全マークの塗り率，`"sources"` に読み取り単位の一覧
+#'   （`source, path, page`。プレビュー時に番号→ファイルの対応に使う）。
 #' @export
-read_marksheet_batch <- function(pdf, layout, dpi = 200, ...) {
-  npages <- pdftools::pdf_info(pdf)$pages
-  base <- basename(pdf)
-  rows <- vector("list", npages)
-  reviews <- list()
-  fills_all <- numeric(0)
-  for (i in seq_len(npages)) {
-    r <- tryCatch(
-      read_marksheet(pdf, layout, page = i, dpi = dpi, ...),
-      error = function(e) NULL
-    )
-    src <- sprintf("%s [%d/%d]", base, i, npages)
+read_marksheet_batch <- function(input, layout, dpi = 200, ...) {
+  jobs <- .expand_sources(input)
+  n <- length(jobs)
+  rows <- vector("list", n)
+  reviews <- list(); fills_all <- numeric(0)
+  for (i in seq_len(n)) {
+    j <- jobs[[i]]
+    r <- tryCatch(read_marksheet(j$path, layout, page = j$page, dpi = dpi, ...),
+                  error = function(e) NULL)
     if (is.null(r)) {
       reviews[[length(reviews) + 1]] <- data.frame(
-        source = src, problem = "読取失敗", blanks = NA_integer_,
+        source = j$source, problem = "読取失敗", blanks = NA_integer_,
         stringsAsFactors = FALSE)
-      rows[[i]] <- data.frame(source = src, stringsAsFactors = FALSE)
+      rows[[i]] <- data.frame(source = j$source, stringsAsFactors = FALSE)
       next
     }
     rv <- attr(r, "review")
     fills_all <- c(fills_all, attr(r, "fills"))
-    rows[[i]] <- cbind(source = src, r, stringsAsFactors = FALSE)
+    rows[[i]] <- cbind(source = j$source, r, stringsAsFactors = FALSE)
     probs <- character(0)
     if (isTRUE(rv$id_incomplete)) probs <- c(probs, "ID不明桁あり")
     if (length(rv$multi)) probs <- c(probs, paste0("複数塗り:", paste(rv$multi, collapse = ",")))
     if (length(probs)) {
       reviews[[length(reviews) + 1]] <- data.frame(
-        source = src, problem = paste(probs, collapse = " / "),
+        source = j$source, problem = paste(probs, collapse = " / "),
         blanks = rv$blanks, stringsAsFactors = FALSE)
     }
   }
-  # 列を揃えて結合
   all_cols <- unique(unlist(lapply(rows, names)))
   rows <- lapply(rows, function(d) {
-    miss <- setdiff(all_cols, names(d))
-    for (m in miss) d[[m]] <- NA
+    for (m in setdiff(all_cols, names(d))) d[[m]] <- NA
     d[all_cols]
   })
   out <- do.call(rbind, rows)
   attr(out, "review") <- if (length(reviews)) do.call(rbind, reviews) else NULL
   attr(out, "fills") <- fills_all
+  attr(out, "sources") <- data.frame(
+    source = vapply(jobs, `[[`, character(1), "source"),
+    path   = vapply(jobs, `[[`, character(1), "path"),
+    page   = vapply(jobs, `[[`, numeric(1),  "page"),
+    stringsAsFactors = FALSE)
   out
 }

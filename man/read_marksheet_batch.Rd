@@ -2,23 +2,29 @@
 % Please edit documentation in R/reader.R
 \name{read_marksheet_batch}
 \alias{read_marksheet_batch}
-\title{複数ページ（PDF）を一括読み取りして応答表を返す}
+\title{PDF・フォルダ・ファイル群を一括読み取りして応答表を返す}
 \usage{
-read_marksheet_batch(pdf, layout, dpi = 200, ...)
+read_marksheet_batch(input, layout, dpi = 200, ...)
 }
 \arguments{
-\item{pdf}{PDF パス（1 ページ 1 枚）。}
+\item{input}{PDF パス，フォルダのパス，またはファイルパスの vector。}
 
 \item{layout}{\code{example_layout()} と同形。}
 
-\item{dpi}{描画解像度。}
+\item{dpi}{PDF 描画解像度。}
 
-\item{...}{\code{read_marksheet()} に渡す引数。}
+\item{...}{\code{read_marksheet()} に渡す引数（\code{fill_thr}, \code{dark}, \code{id_prefix} 等）。}
 }
 \value{
 data.frame（\verb{source, ID1.., M1..}）。属性 \code{"review"} に要目視の data.frame，
-属性 \code{"fills"} に全ページ・全マークの塗り率（塗り率分布の可視化用）。
+\code{"fills"} に全マークの塗り率，\code{"sources"} に読み取り単位の一覧
+（\verb{source, path, page}。プレビュー時に番号→ファイルの対応に使う）。
 }
 \description{
-複数ページ（PDF）を一括読み取りして応答表を返す
+入力は次のいずれでもよい。
+\itemize{
+\item まとめ PDF 1 枚（1 ページ 1 枚）。\code{source} は \code{"file.pdf [i/N]"}。
+\item フォルダのパス。中の画像（jpg/png/tiff…）と PDF をすべて読む。
+\item ファイルパスの文字列ベクトル（画像・PDF 混在可）。
+}
 }

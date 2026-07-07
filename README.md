@@ -76,11 +76,19 @@ layout <- list(
 # 1 枚 / one sheet
 res <- read_marksheet("one_scan.jpg", layout)
 
-# 複数ページ PDF を一括 / a whole batch PDF
-tbl <- read_marksheet_batch("all_students.pdf", layout)
+# 一括 / batch — 入力は 3 通り（PDF・フォルダ・ファイル群）:
+tbl <- read_marksheet_batch("all_students.pdf", layout)      # まとめ PDF 1 枚
+tbl <- read_marksheet_batch("scans/", layout)                # フォルダ（中を全部）
+tbl <- read_marksheet_batch(c("a.jpg","b.pdf"), layout)      # ファイル群（混在可）
 write.csv(tbl, "responses.csv", row.names = FALSE)
 review <- attr(tbl, "review")   # 要目視（複数塗り・ID 不明）/ items to eyeball
+
+# 目視確認 / eyeball a sheet: 検出マークを重ねた注釈画像
+ov <- overlay_marksheet("one_scan.jpg", layout)   # 緑=検出, 赤=複数塗り, 青枠=四隅
+magick::image_write(ov, "check.png")
 ```
+
+塗り率しきい値 `fill_thr` の既定は 0.13（鉛筆マーク向け）。清刷り前提なら 0.20 でもよい。
 
 出力 / output: `source, ID1..IDn, M1..Mq`（AnswerSheet DIY 互換 / compatible）。
 

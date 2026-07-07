@@ -149,15 +149,17 @@ ui <- fluidPage(
             div(class = "card2",
               div(class = "h", "スキャンと読み取り設定"),
               div(class = "b",
-                fileInput("scan", "スキャン画像 / PDF",
+                fileInput("scan", "スキャン画像 / PDF（アップロード）",
                           accept = c(".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff"),
-                          multiple = TRUE, buttonLabel = "選択...", placeholder = "200dpi・ADF・A4"),
+                          multiple = TRUE, buttonLabel = "選択...", placeholder = "まとめPDF・1人ずつの画像/PDF どちらも可"),
+                textInput("folder", "またはフォルダのパス", placeholder = "/path/to/scans（中の画像・PDFを全部読む）"),
+                div(class = "hint", HTML("入力は3通り: <b>まとめPDF1枚</b> / <b>1人ずつのファイル群</b>（複数選択）/ <b>フォルダ指定</b>。フォルダ欄を書くとアップロードより優先。")),
+                br(),
                 selectInput("laysrc", "レイアウト定義（layout）",
                             c("今作った config（①の設定）" = "gen",
                               "同梱サンプル example_layout()" = "example")),
-                div(class = "hint", "生成に使った config をそのまま渡せば、接頭辞も座標も一致します。"),
-                br(),
-                sliderInput("thr", "塗り率しきい値（fill_thr）", min = 0, max = 0.6, value = 0.20, step = 0.01),
+                sliderInput("thr", "塗り率しきい値（fill_thr）", min = 0, max = 0.6, value = 0.13, step = 0.01),
+                div(class = "hint", "既定 0.13（鉛筆マーク向け）。取りこぼしが多ければ下げる（0.08 未満で誤検出が出始める）。"),
                 fluidRow(
                   column(6, numericInput("dpi", "描画 dpi", 200, min = 100, max = 400)),
                   column(6, numericInput("dark", "暗画素しきい値", 140, min = 0, max = 255))
@@ -187,7 +189,23 @@ ui <- fluidPage(
               ),
               div(class = "btnrow", style = "margin-top:16px",
                 downloadLink("dl_resp", class = "btn-omr primary", list(.ic_dl, "responses.csv")),
-                downloadLink("dl_rev",  class = "btn-omr",         list(.ic_dl, "review.csv")))
+                downloadLink("dl_rev",  class = "btn-omr",         list(.ic_dl, "review.csv"))),
+
+              # ---- プレビュー（目視確認） ----
+              div(class = "card2", style = "margin-top:18px",
+                div(class = "h", "プレビュー（目視確認） — 検出マークを重ねて表示"),
+                div(class = "b",
+                  fluidRow(
+                    column(5, numericInput("pv_idx", "番号（source の何番目）", 1, min = 1, step = 1)),
+                    column(7, div(style = "margin-top:6px",
+                      uiOutput("pv_nav"),
+                      div(class = "hint", "四隅=青枠 / 検出した塗り=緑（複数塗りは赤）/ 薄い点=全選択肢の位置。要目視の答案を番号で開いて確認。")))
+                  ),
+                  uiOutput("pv_caption"),
+                  div(style = "overflow:auto; max-height:640px; border:1px solid var(--line); border-radius:8px; margin-top:8px",
+                      imageOutput("pv_img", height = "auto"))
+                )
+              )
             )
           )
         )
@@ -273,47 +291,33 @@ server <- function(input, output, session) {
   # ---- 読み取り ----
   result <- reactiveVal(NULL)
 
+  cur_layout <- reactive(if (input$laysrc == "gen") gen() else tikzomr::example_layout())
+
   observeEvent(input$run, {
-    req(input$scan)
-    layout <- if (input$laysrc == "gen") gen() else tikzomr::example_layout()
-    withProgress(message = "読み取り中...", value = 0, {
-      files <- input$scan
-      pieces <- list(); fills <- numeric(0); revs <- list()
-      npdf <- sum(grepl("\\.pdf$", files$name, ignore.case = TRUE))
-      for (r in seq_len(nrow(files))) {
-        nm <- files$name[r]; dp <- files$datapath[r]
-        incProgress(1 / nrow(files), detail = nm)
-        if (grepl("\\.pdf$", nm, ignore.case = TRUE)) {
-          res <- tikzomr::read_marksheet_batch(dp, layout, dpi = input$dpi,
-                                               dark = input$dark, fill_thr = input$thr)
-          # source をファイル名に戻す
-          res$source <- sub("^[^ ]+", nm, res$source)
-          pieces[[length(pieces) + 1]] <- res
-          fills <- c(fills, attr(res, "fills"))
-          rv <- attr(res, "review"); if (!is.null(rv)) { rv$source <- sub("^[^ ]+", nm, rv$source); revs[[length(revs)+1]] <- rv }
-        } else {
-          one <- tryCatch(tikzomr::read_marksheet(dp, layout, dpi = input$dpi,
-                                                  dark = input$dark, fill_thr = input$thr),
-                          error = function(e) NULL)
-          if (is.null(one)) {
-            revs[[length(revs)+1]] <- data.frame(source = nm, problem = "読取失敗", blanks = NA_integer_)
-            pieces[[length(pieces)+1]] <- data.frame(source = nm)
-          } else {
-            fills <- c(fills, attr(one, "fills"))
-            rv <- attr(one, "review"); probs <- character(0)
-            if (isTRUE(rv$id_incomplete)) probs <- c(probs, "ID不明桁あり")
-            if (length(rv$multi)) probs <- c(probs, paste0("複数塗り:", paste(rv$multi, collapse = ",")))
-            if (length(probs)) revs[[length(revs)+1]] <- data.frame(source = nm, problem = paste(probs, collapse = " / "), blanks = rv$blanks)
-            pieces[[length(pieces)+1]] <- cbind(source = nm, one)
-          }
-        }
+    layout <- cur_layout()
+    folder <- trimws(input$folder %||% "")
+    # 入力の決定: フォルダ欄が優先 → なければアップロード（元名で temp に複製してフォルダ扱い）
+    if (nzchar(folder)) {
+      if (!dir.exists(folder)) {
+        showNotification(paste0("フォルダが見つかりません: ", folder), type = "error"); return()
       }
-      # 列を揃えて結合
-      allc <- unique(unlist(lapply(pieces, names)))
-      pieces <- lapply(pieces, function(d) { for (m in setdiff(allc, names(d))) d[[m]] <- NA; d[allc] })
-      resp <- do.call(rbind, pieces)
-      review <- if (length(revs)) do.call(rbind, revs) else NULL
-      result(list(resp = resp, review = review, fills = fills))
+      input_path <- folder
+    } else {
+      req(input$scan)
+      td <- tempfile("omr_up_"); dir.create(td)
+      for (r in seq_len(nrow(input$scan)))
+        file.copy(input$scan$datapath[r], file.path(td, input$scan$name[r]), overwrite = TRUE)
+      input_path <- td
+    }
+    withProgress(message = "読み取り中...", value = 0.3, {
+      res <- tryCatch(
+        tikzomr::read_marksheet_batch(input_path, layout, dpi = input$dpi,
+                                      dark = input$dark, fill_thr = input$thr),
+        error = function(e) { showNotification(paste("読み取りエラー:", conditionMessage(e)), type = "error"); NULL })
+      req(res)
+      result(list(resp = as.data.frame(res), review = attr(res, "review"),
+                  fills = attr(res, "fills"), sources = attr(res, "sources")))
+      updateNumericInput(session, "pv_idx", value = 1, max = nrow(attr(res, "sources")))
     })
   })
 
@@ -367,6 +371,49 @@ server <- function(input, output, session) {
   output$dl_rev <- downloadHandler(
     filename = function() "review.csv",
     content = function(file) { r <- result(); utils::write.csv(if (is.null(r$review)) data.frame() else r$review, file, row.names = FALSE, na = "") })
+
+  # ---- プレビュー（目視確認） ----
+  # 要目視の答案へジャンプ
+  output$pv_nav <- renderUI({
+    r <- result()
+    if (is.null(r) || is.null(r$review) || nrow(r$review) == 0) return(div(class = "hint", "要目視なし"))
+    selectInput("pv_jump", NULL, choices = c("要目視へジャンプ..." = "", stats::setNames(r$review$source, r$review$source)))
+  })
+  observeEvent(input$pv_jump, {
+    r <- result(); req(r, nzchar(input$pv_jump))
+    i <- match(input$pv_jump, r$sources$source)
+    if (!is.na(i)) updateNumericInput(session, "pv_idx", value = i)
+  })
+
+  output$pv_caption <- renderUI({
+    r <- result()
+    if (is.null(r) || is.null(r$sources)) return(div(class = "hint", "読み取り後に、番号でスキャンを開いて検出結果を確認できます。"))
+    srcs <- r$sources; i <- input$pv_idx
+    if (is.null(i) || i < 1 || i > nrow(srcs)) return(div(class = "hint", "番号が範囲外です。"))
+    src <- srcs$source[i]
+    row <- r$resp[r$resp$source == src, , drop = FALSE]
+    idtxt <- if ("id" %in% names(row)) row$id[1] else paste0(unlist(row[grepl("^ID", names(row))]), collapse = "")
+    prob <- if (!is.null(r$review)) r$review$problem[match(src, r$review$source)] else NA
+    pill <- if (!is.na(prob)) sprintf(" · <span style='color:var(--warn);font-weight:600'>%s</span>", prob) else ""
+    div(class = "hint", HTML(sprintf("#%d / %d — <b>%s</b> · 学籍番号 <code>%s</code>%s", i, nrow(srcs), src, idtxt, pill)))
+  })
+
+  output$pv_img <- renderImage({
+    r <- result()
+    if (is.null(r) || is.null(r$sources)) return(list(src = "", alt = ""))
+    srcs <- r$sources; i <- input$pv_idx
+    validate(need(!is.null(i) && i >= 1 && i <= nrow(srcs), "番号が範囲外です"))
+    row <- srcs[i, ]
+    ov <- tryCatch(
+      tikzomr::overlay_marksheet(row$path, cur_layout(), page = row$page,
+                                 dpi = input$dpi, dark = input$dark, fill_thr = input$thr),
+      error = function(e) NULL)
+    validate(need(!is.null(ov), "この番号は読み取り失敗（四隅未検出など）のため重ね描きできません。"))
+    tmp <- tempfile(fileext = ".png")
+    magick::image_write(ov, tmp)   # フル解像度で書き出し（縮小はブラウザ側）
+    list(src = tmp, contentType = "image/png", width = "100%",
+         alt = paste("overlay", row$source))
+  }, deleteFile = TRUE)
 }
 
 shinyApp(ui, server)
