@@ -1,6 +1,6 @@
 Package: tikzomr
-Title: Read TikZ-Generated Mark Sheets into CSV
-Version: 0.1.0
+Title: Create and Read TikZ-Generated Mark Sheets
+Version: 0.3.0
 Authors@R:
     person("Koji E.", "Kosugi", email = "kosugitti@gmail.com",
            role = c("aut", "cre"))
@@ -9,12 +9,18 @@ Description: Create mark sheets with TeX/TikZ and read scanned sheets into a
     homography solved from the fiducial correspondence) and a fill-ratio test
     per bubble. Runs entirely locally, so answer sheets never leave the machine.
     The reading definition is derived from the same layout used to typeset the
-    sheet, so there is no manual placement of read positions.
+    sheet, so there is no manual placement of read positions. A local 'shiny'
+    app ('run_omr_app') provides a GUI for both generating and reading sheets.
 License: GPL-3
+URL: https://github.com/kosugitti/tikz-omr
+BugReports: https://github.com/kosugitti/tikz-omr/issues
 Encoding: UTF-8
 Imports:
+    graphics,
+    grDevices,
     magick,
     pdftools,
+    stats,
     utils
 Suggests:
     testthat (>= 3.0.0),
