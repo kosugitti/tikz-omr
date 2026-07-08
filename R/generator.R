@@ -114,7 +114,8 @@ default_config <- function() {
   }
   for (d in seq_len(id$n_digits)) {
     y <- id$y0 + (d - 1) * id$rowh
-    add("  \\node[anchor=east,font=\\scriptsize] at ", .pt(id$x0 - id$colw, y),
+    # ラベル右端をバブル寄りに 2mm ずらし，枠との余白を広げて枠内に収める
+    add("  \\node[anchor=east,font=\\scriptsize] at ", .pt(id$x0 - id$colw + 2, y),
         " {", d, "桁目};")
   }
   idm <- geo$marks[grepl("^ID", geo$marks$field), ]
@@ -137,7 +138,8 @@ default_config <- function() {
           " {", an$symbols[j], "};")
     for (i in seq_len(qs[2] - qs[1] + 1)) {
       q <- qs[1] + i - 1; y <- an$y0 + (i - 1) * an$rowh
-      add("  \\node[anchor=east,font=\\scriptsize] at ", .pt(x0 - an$optw, y),
+      # ラベル右端をバブル寄りに 2mm ずらし，枠との余白を広げて枠内に収める
+      add("  \\node[anchor=east,font=\\scriptsize] at ", .pt(x0 - an$optw + 2, y),
           " {M", q, "};")
     }
     ncol <- length(an$symbols); nrow_c <- qs[2] - qs[1] + 1
