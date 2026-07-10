@@ -198,6 +198,18 @@ tikz-omr/
     注意: `image_resize` は image_draw 出力を壊すのでフル解像度で書き出しブラウザ縮小。
 - docs/ 公開サイト，小杉サイトからの「TeX/TikZ でマークシートを作り読み取る一連のフリーソフトウェア」リンク
 
+### 公開状況・次の再開点（2026-07 時点）
+
+- **v0.3.0 を GitHub 公開済み**（`github.com/kosugitti/tikz-omr`・PUBLIC・タグ v0.3.0）。
+  `remotes::install_github("kosugitti/tikz-omr")` で導入可（実機確認済み）。R CMD check =
+  0 errors / 0 notes / 1 warning（残 warning は日本語ソースの非 ASCII で不可避・受容）。
+- 生成 PDF の行ラベルはみ出しは修正済み（`.build_tex` の行ラベル右端を 2mm バブル寄りに）。
+- **次の推奨作業＝正答 2 モード＋採点参考実装**。(a) 予約 ID（999999）スキャンを正答として抽出，
+  (b) `answer_key` CSV 直接指定。素点集計・項目統計は参考実装（ビネット）としてコア外に置く
+  （§1 スコープ「採点は対象外」を保つ）。検証に使った 2025 後期データが answer_key/999999/
+  item_stats を含む実運用パイプラインなので設計の下敷きにできる（データは個人情報につき同梱しない）。
+- 他候補: 英字 A-Z を塗る様式（Scantron 型），GitHub Release（日英告知）・pkgdown docs サイト。
+
 ---
 
 ## 9. 開発規約
