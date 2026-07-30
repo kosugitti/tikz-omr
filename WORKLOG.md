@@ -177,3 +177,12 @@ generator が page 座標を吐く方針と噛み合う。次は R パッケー�
 ホーム索引(~/Dropbox/CLAUDE.md)のステータスセル圧縮時の退避(退避時点の全文):
 
 TikZマークシートの生成+読取Rパッケージ tikzomr(GPL-3・答案をクラウドに出さない)。v0.3.0をGitHub公開済(github.com/kosugitti/tikz-omr, remotes::install_github で導入可)。生成器/リーダ/固定接頭辞ID/ローカルShiny GUI「マークシート工房」(run_omr_app)/入力3モード(PDF・フォルダ・ファイル群)/目視プレビュー(overlay_marksheet)まで完成。実授業答案86枚で検証済(既定fill_thr=0.13・読取失敗0/誤検出0)。R CMD check 0errors/0notes(残1warningは日本語ソースで不可避・受容)。次の推奨=正答2モード＋採点参考実装(999999正答シート/answer_key CSVの2モード＋素点集計ビネット)。他候補=英字A-Z塗り様式(Scantron型)・GitHub Release/pkgdown。詳細→Git/tikz-omr/{CLAUDE,WORKLOG}.md
+
+## 2026-07-30 pkgdownサイトをGitHub Pagesで公開
+
+- pkgdownサイト一式を新設し公開: **https://kosugitti.github.io/tikz-omr/**
+- 構成: `_pkgdown.yml`（Bootstrap5・lang ja・リファレンスをGenerate/Read/GUI/Geometryの4群に整理）、トップ=README、`vignettes/articles/getting-started.Rmd`（LuaLaTeX依存部はeval=FALSEの静的記事＋`inst/examples`から生成した画像ギャラリー: 生成マークシート/原スキャン/読取オーバーレイ）、関数リファレンスはman/*.Rdから自動生成。
+- CI/CD: `.github/workflows/pkgdown.yaml`（r-lib/actions標準）でmain push時にビルド→`gh-pages`へ配信（JamesIves/github-pages-deploy-action）。`docs/`はローカル生成物なので.gitignore、サイトソースは.Rbuildignoreでパッケージビルドから除外。
+- 初回: main push（`52823bd`）→CI成功→gh-pages生成→`gh api .../pages`でソース設定（gh-pagesブランチ）を有効化→公開確認（index/articles/reference全200）。
+- READMEの節見出しを `特長 / Why`→`特長 / Features` に変更（`50b095b`）→CI再ビルドでサイト反映確認。
+- 以後はmain pushのたびCIが自動再ビルド・再配信する。
