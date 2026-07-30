@@ -12,3 +12,5 @@ __pycache__/
 # 作業中間物
 *.log
 scratch/
+# pkgdown (CIがgh-pagesへ生成・配信するためコミットしない)
+docs/

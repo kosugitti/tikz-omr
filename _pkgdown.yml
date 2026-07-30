@@ -1,0 +1,45 @@
+url: https://kosugitti.github.io/tikz-omr/
+
+template:
+  bootstrap: 5
+  bslib:
+    primary: "#2b6cb0"
+
+lang: ja
+
+navbar:
+  structure:
+    left:  [intro, reference, articles]
+    right: [search, github]
+  components:
+    articles:
+      text: 使い方 / Articles
+      menu:
+        - text: はじめに / Getting started
+          href: articles/getting-started.html
+
+reference:
+- title: マークシートを作る / Generate
+  desc: config から .tex・PDF・読み取り定義を同時に作る
+  contents:
+  - make_marksheet
+  - default_config
+
+- title: スキャンを読み取る / Read
+  desc: スキャン画像を回答テーブルへ。目視確認のオーバーレイも
+  contents:
+  - read_marksheet
+  - read_marksheet_batch
+  - overlay_marksheet
+
+- title: 同梱例・GUI / Example & GUI
+  contents:
+  - example_layout
+  - run_omr_app
+
+- title: 低水準の幾何 / Low-level geometry
+  desc: 四隅検出と射影変換。通常は直接使わない
+  contents:
+  - detect_fiducials
+  - homography
+  - apply_h

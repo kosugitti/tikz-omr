@@ -6,3 +6,7 @@
 ^\.Rproj\.user$
 ^inst/examples/overlay_.*\.png$
 ^LICENSE$
+^_pkgdown\.yml$
+^vignettes/articles$
+^\.github$
+^pkgdown$
