@@ -8,7 +8,7 @@ An R package to create mark sheets with TeX/TikZ and read them into a response t
 
 ---
 
-## 特長 / Why
+## 特長 / Features
 
 ```
 問題を作る → TikZ でマークシートを作る（config が読み取り定義も兼ねる）
