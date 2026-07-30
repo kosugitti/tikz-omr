@@ -117,6 +117,18 @@ res <- read_marksheet(
 
 ---
 
+## 質問・バグ報告 / Questions & bugs
+
+何かあれば [Issue](https://github.com/kosugitti/tikz-omr/issues) か
+[Discussions](https://github.com/kosugitti/tikz-omr/discussions) へどうぞ。
+不具合の報告は Issue，使い方の相談・アイデアは Discussions が向いています。
+
+Found a bug or have a question? Open an
+[issue](https://github.com/kosugitti/tikz-omr/issues) or start a
+[discussion](https://github.com/kosugitti/tikz-omr/discussions).
+
+---
+
 ## 状態 / Status
 
 読み取りエンジン（`read_marksheet` / `read_marksheet_batch`），生成器（`make_marksheet`），
