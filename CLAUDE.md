@@ -259,8 +259,16 @@ id = list(
       （§1 スコープ「採点は対象外」を保つ）。検証に使った 2025
       後期データが answer_key/999999/ item_stats
       を含む実運用パイプラインなので設計の下敷きにできる（データは個人情報につき同梱しない）。
+- **pkgdown サイトを GitHub Pages で公開済み（2026-07-30）**:
+  <https://kosugitti.github.io/tikz-omr/>
+  `_pkgdown.yml`＋`.github/workflows/pkgdown.yaml`（r-lib/actions・main
+  push で gh-pages へ自動配信）。 記事
+  `vignettes/articles/getting-started.Rmd`（LuaLaTeX 依存部は eval=FALSE
+  の静的版＋`inst/examples` 由来の画像ギャラリー）。`docs/` は
+  .gitignore（CI 生成物）、サイトソースは .Rbuildignore で build 除外。
+  以後は main push のたび自動再ビルド・再配信。詳細→WORKLOG 2026-07-30。
 - 他候補: 英字 A-Z を塗る様式（Scantron 型），GitHub
-  Release（日英告知）・pkgdown docs サイト。
+  Release（日英告知）。
 
 ------------------------------------------------------------------------
 

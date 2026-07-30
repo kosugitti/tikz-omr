@@ -208,7 +208,9 @@ install: remotes::install_github("kosugitti/tikzomr")</code></pre>
 <ol start="2" style="list-style-type: lower-alpha"><li>
 <code>answer_key</code> CSV 直接指定。素点集計・項目統計は参考実装（ビネット）としてコア外に置く （§1 スコープ「採点は対象外」を保つ）。検証に使った 2025 後期データが answer_key/999999/ item_stats を含む実運用パイプラインなので設計の下敷きにできる（データは個人情報につき同梱しない）。</li>
 </ol></li>
-<li>他候補: 英字 A-Z を塗る様式（Scantron 型），GitHub Release（日英告知）・pkgdown docs サイト。</li>
+<li>
+<strong>pkgdown サイトを GitHub Pages で公開済み（2026-07-30）</strong>: <a href="https://kosugitti.github.io/tikz-omr/" class="uri">https://kosugitti.github.io/tikz-omr/</a> <code>_pkgdown.yml</code>＋<code>.github/workflows/pkgdown.yaml</code>（r-lib/actions・main push で gh-pages へ自動配信）。 記事 <code>vignettes/articles/getting-started.Rmd</code>（LuaLaTeX 依存部は eval=FALSE の静的版＋<code>inst/examples</code> 由来の画像ギャラリー）。<code>docs/</code> は .gitignore（CI 生成物）、サイトソースは .Rbuildignore で build 除外。 以後は main push のたび自動再ビルド・再配信。詳細→WORKLOG 2026-07-30。</li>
+<li>他候補: 英字 A-Z を塗る様式（Scantron 型），GitHub Release（日英告知）。</li>
 </ul><hr></div>
 </div>
 <div class="section level2">
